@@ -67,6 +67,7 @@ An AI-powered application that predicts Work User Codes (WUCs) for KC-135 aircra
 **Technologies:** Python, Streamlit, PyTorch, Transformers
 
 [GitHub](https://github.com/lonespear/wuc_predict){.btn .btn-outline-secondary target="_blank"}
+[Live Demo](https://wucpred.streamlit.app/){.btn .btn-success target="_blank"}
 :::
 :::
 ::::
@@ -92,6 +93,7 @@ A comprehensive investment platform combining machine learning forecasting with 
 **Technologies:** Python, Streamlit, TensorFlow, Plotly, yFinance
 
 [GitHub](https://github.com/lonespear/HedgeAbove){.btn .btn-outline-secondary target="_blank"}
+[Live Demo](https://hedgeabove.streamlit.app/){.btn .btn-success target="_blank"}
 :::
 :::
 ::::
