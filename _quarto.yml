@@ -2,13 +2,25 @@ project:
   type: website
 
 website:
-  title: "MA206X"
+  title: "Jonathan Day | Portfolio"
   navbar:
     left:
       - href: index.qmd
-        text: Course Guide
+        text: Home
+      - text: Projects
+        menu:
+          - href: fiberL.qmd
+            text: fiberL - Fiber Analysis
+          - href: medrev.qmd
+            text: MedScrape - Literature Review
+          - href: ma206_course.qmd
+            text: MA206 - Probability & Statistics
       - href: code_annex.qmd
-        text: Code Annex
+        text: Code Examples
+    right:
+      - icon: github
+        href: https://github.com/lonespear
+        text: GitHub
 
 format:
   html:
@@ -19,5 +31,6 @@ format:
     page-layout: full
     fig-align: center
     css: styles.css
+    link-external-newwindow: true
 
 editor: visual

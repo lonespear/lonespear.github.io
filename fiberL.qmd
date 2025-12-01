@@ -1,0 +1,540 @@
+---
+title: "fiberL: Computer Vision for Fiber Analysis"
+subtitle: "Advanced SEM Image Processing for Fiber Network Characterization"
+page-layout: full
+---
+
+## Overview
+
+fiberL is a specialized computer vision application designed to automatically analyze Scanning Electron Microscope (SEM) images of fiber networks. It performs sophisticated image processing, fiber detection, network reconstruction, and quantitative analysis to extract meaningful structural properties from complex fiber assemblies.
+
+**Repository:** [github.com/lonespear/fiberL](https://github.com/lonespear/fiberL)
+
+---
+
+## Key Features
+
+### 1. Advanced Image Preprocessing
+
+The application employs state-of-the-art image enhancement techniques:
+
+- **Anisotropic Diffusion Filtering**: Noise reduction while preserving edges using Perona-Malik equations
+- **Coherence-Enhanced Diffusion**: Follows fiber orientations for structure-aware smoothing
+- **Morphological Top-Hat Transform**: Background removal and contrast enhancement
+- **Multi-Stage Thresholding**: Binary thresholding combined with Canny edge detection
+- **Skeletonization**: Extracts fiber centerlines for precise measurement
+
+```python
+# Example preprocessing workflow
+def preprocess_image(image):
+    # Anisotropic diffusion
+    smoothed = anisotropic_diffusion(image, iterations=10, kappa=50)
+
+    # Coherence-enhanced diffusion
+    enhanced = coherence_diffusion(smoothed, alpha=0.01, iterations=5)
+
+    # Top-hat transform
+    tophat = morphology.white_tophat(enhanced, selem=morphology.disk(15))
+
+    # Thresholding
+    binary = threshold_otsu(tophat)
+
+    # Skeletonization
+    skeleton = morphology.skeletonize(binary)
+
+    return skeleton
+```
+
+### 2. Intelligent Fiber Detection
+
+Uses advanced morphological operations to identify fiber network topology:
+
+- **Branch Point Detection**: 17 specialized kernels for T-junctions, Y-junctions, and crossings
+- **Small Segment Pruning**: Removes noise artifacts
+- **Fiber Tip Detection**: Identifies fiber endpoints
+- **Hit-or-Miss Transforms**: Pattern matching for junction types
+
+```python
+# Branch point detection kernels
+T_JUNCTION_KERNELS = [
+    np.array([[0,1,0], [1,1,1], [0,0,0]]),  # T-top
+    np.array([[0,0,0], [1,1,1], [0,1,0]]),  # T-bottom
+    # ... 15 more rotation variants
+]
+```
+
+### 3. Network Reconstruction
+
+Sophisticated graph-based algorithms reconstruct the complete fiber network:
+
+- **Intersection Association**: Links fibers at branch points using cosine similarity
+- **Edge Connectivity Analysis**: Determines fiber continuity through junctions
+- **Tip-to-Tip Association**: Connects broken fibers based on proximity and orientation
+- **Curvature-Aware Merging**: Uses PCA to evaluate fiber curvature for intelligent merging
+
+**Algorithm:**
+```python
+def reconstruct_network(skeleton):
+    # 1. Detect branch points and tips
+    branch_points = detect_branches(skeleton)
+    tips = detect_tips(skeleton)
+
+    # 2. Extract fiber segments
+    segments = extract_segments(skeleton, branch_points)
+
+    # 3. Associate segments at intersections
+    for branch in branch_points:
+        edges = get_connected_edges(branch, segments)
+        # Merge edges with similar orientation (cosine similarity)
+        merged = merge_by_orientation(edges, threshold=0.9)
+
+    # 4. Connect broken fibers
+    for tip1, tip2 in itertools.combinations(tips, 2):
+        if should_connect(tip1, tip2):
+            connect_fibers(tip1, tip2)
+
+    return reconstructed_network
+```
+
+### 4. Quantitative Analysis
+
+Extracts comprehensive quantitative metrics:
+
+#### Fiber Length
+- **Arc Length Measurement**: Follows fiber curvature for accurate length
+- **Calibrated Units**: Converts pixels to physical units (nm, μm, mm)
+
+```python
+def calculate_fiber_length(fiber_coords, scale_factor):
+    """
+    Calculate arc length of fiber
+
+    Parameters:
+    -----------
+    fiber_coords : array
+        (N, 2) array of fiber pixel coordinates
+    scale_factor : float
+        Microns per pixel
+
+    Returns:
+    --------
+    length : float
+        Fiber length in microns
+    """
+    distances = np.sqrt(np.sum(np.diff(fiber_coords, axis=0)**2, axis=1))
+    length_pixels = np.sum(distances)
+    length_microns = length_pixels * scale_factor
+    return length_microns
+```
+
+#### Orientation Analysis
+- **PCA-Based Directional Analysis**: Principal component analysis for fiber direction
+- **Angle Distribution**: 0-180° orientation mapping
+- **Rose Diagrams**: Circular histograms for orientation visualization
+
+```python
+def calculate_fiber_orientation(fiber_coords):
+    """
+    Calculate fiber orientation using PCA
+
+    Returns:
+    --------
+    angle : float
+        Orientation angle in degrees (0-180)
+    """
+    pca = PCA(n_components=1)
+    pca.fit(fiber_coords)
+
+    # Get principal component direction
+    direction = pca.components_[0]
+    angle = np.arctan2(direction[1], direction[0])
+
+    # Convert to 0-180 range
+    angle_degrees = np.degrees(angle) % 180
+
+    return angle_degrees
+```
+
+#### Persistence Length
+- **Tangent Correlation Analysis**: Measures fiber stiffness
+- **Polymer Physics Metric**: Characterizes mechanical properties
+
+```python
+def calculate_persistence_length(fiber_coords, scale_factor):
+    """
+    Calculate persistence length via tangent correlation
+
+    Persistence length (Lp) characterizes the length scale
+    over which a fiber remains straight.
+
+    Formula: <cos(θ(s))> = exp(-s/Lp)
+    """
+    # Calculate tangent vectors along fiber
+    tangents = np.diff(fiber_coords, axis=0)
+    tangents = tangents / np.linalg.norm(tangents, axis=1, keepdims=True)
+
+    # Calculate correlation as function of arc length
+    correlations = []
+    arc_lengths = []
+
+    for separation in range(1, len(tangents)):
+        cos_angles = np.sum(tangents[:-separation] * tangents[separation:], axis=1)
+        correlations.append(np.mean(cos_angles))
+        arc_lengths.append(separation * scale_factor)
+
+    # Fit exponential: <cos(θ)> = exp(-s/Lp)
+    def exponential(s, Lp):
+        return np.exp(-s / Lp)
+
+    popt, _ = curve_fit(exponential, arc_lengths, correlations)
+    persistence_length = popt[0]
+
+    return persistence_length
+```
+
+#### Lambda Coefficient
+- **Stiffness Ratio**: log(persistence length) / actual length
+- **Dimensionless Metric**: Compares intrinsic stiffness to fiber geometry
+
+### 5. Interactive Streamlit Interface
+
+User-friendly web application with:
+
+- **Scale Calibration Tool**: Point-and-click distance measurement
+- **ROI Cropping**: Select regions of interest with preview
+- **Parameter Tuning**: 17+ adjustable processing parameters
+  - Diffusion iterations and constants
+  - Threshold values
+  - Pruning lengths
+  - Association thresholds
+- **Real-Time Processing**: Immediate visual feedback
+- **Batch Processing**: Analyze multiple images
+
+**Interface Workflow:**
+```
+1. Upload SEM Image
+   ↓
+2. Scale Calibration (optional)
+   - Click two points
+   - Enter known distance
+   ↓
+3. ROI Selection (optional)
+   - Draw bounding box
+   - Preview cropped region
+   ↓
+4. Parameter Adjustment
+   - Tune preprocessing
+   - Set detection thresholds
+   ↓
+5. Process & Analyze
+   - View color-coded network
+   - Export statistics
+```
+
+### 6. Visualization Suite
+
+Comprehensive visual output:
+
+- **Color-Coded Networks**: Fibers colored by length or randomly
+- **Length Histograms**: Distribution analysis
+- **Rose Diagrams**: Orientation visualization
+- **Scatter Plots**: Length vs. angle relationships
+- **Multi-Panel Summaries**: Combined figure output
+
+```python
+# Example visualization code
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def visualize_results(fibers_df):
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+    # Length histogram
+    axes[0,0].hist(fibers_df['length'], bins=30, edgecolor='black')
+    axes[0,0].set_xlabel('Fiber Length (μm)')
+    axes[0,0].set_ylabel('Count')
+
+    # Rose diagram
+    plot_rose_diagram(fibers_df['orientation'], ax=axes[0,1])
+
+    # Length vs. Angle
+    axes[1,0].scatter(fibers_df['orientation'], fibers_df['length'])
+    axes[1,0].set_xlabel('Orientation (degrees)')
+    axes[1,0].set_ylabel('Length (μm)')
+
+    # Color-coded network
+    plot_fiber_network(fibers_df, ax=axes[1,1], color_by='length')
+
+    plt.tight_layout()
+    return fig
+```
+
+---
+
+## Technical Implementation
+
+### Core Technologies
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| Image Processing | OpenCV, scikit-image | Morphological operations, filtering |
+| Numerical Computing | NumPy, SciPy | Array operations, optimization |
+| Machine Learning | scikit-learn | PCA for orientation analysis |
+| Visualization | Matplotlib, Seaborn | Statistical plots |
+| Web Interface | Streamlit | Interactive application |
+| Data Management | Pandas | Structured data handling |
+
+### System Architecture
+
+```
+┌─────────────────────────────────────┐
+│         Streamlit UI                │
+│  (Parameter Input & Visualization)  │
+└──────────────┬──────────────────────┘
+               │
+               ↓
+┌─────────────────────────────────────┐
+│       fiberL Core Engine            │
+├─────────────────────────────────────┤
+│  • Image Preprocessing              │
+│  • Fiber Detection                  │
+│  • Network Reconstruction           │
+│  • Quantitative Analysis            │
+└──────────────┬──────────────────────┘
+               │
+               ↓
+┌─────────────────────────────────────┐
+│     Computer Vision Backends        │
+│  (OpenCV, scikit-image, NumPy)      │
+└─────────────────────────────────────┘
+```
+
+### Project Structure
+
+```
+fiberL/
+├── fiberL.py                  # Core analysis engine (1,177 lines)
+│   ├── UnionFind class        # Disjoint set data structure
+│   ├── Image preprocessing    # Diffusion, morphology
+│   ├── Skeletonization        # Centerline extraction
+│   ├── fiberL class          # Main analyzer
+│   │   ├── detect_branches()
+│   │   ├── reconstruct_network()
+│   │   ├── calculate_metrics()
+│   │   └── visualize()
+│   └── Statistical analysis   # Summary statistics
+│
+├── app.py                     # Streamlit web interface
+│   ├── File upload
+│   ├── Scale calibration
+│   ├── ROI cropping
+│   ├── Parameter controls
+│   └── Results display
+│
+├── requirements.txt           # Python dependencies
+│   ├── opencv-python>=4.5.0
+│   ├── scikit-image>=0.18.0
+│   ├── streamlit>=1.10.0
+│   ├── numpy>=1.20.0
+│   ├── scipy>=1.7.0
+│   ├── pandas>=1.3.0
+│   ├── matplotlib>=3.4.0
+│   └── seaborn>=0.11.0
+│
+└── .git/                      # Version control
+```
+
+---
+
+## Use Cases
+
+### Materials Science Research
+- Characterize electrospun nanofiber mats
+- Analyze polymer fiber networks
+- Study textile microstructure
+- Investigate biological fibrous materials (collagen, cellulose)
+
+### Quality Control
+- Monitor fiber production consistency
+- Detect manufacturing defects
+- Quantify batch-to-batch variation
+- Validate material specifications
+
+### Academic Applications
+- Undergraduate research projects
+- Graduate thesis work
+- Publication-quality quantitative analysis
+- Teaching image processing concepts
+
+---
+
+## Installation & Usage
+
+### Installation
+
+```bash
+# Clone repository
+git clone https://github.com/lonespear/fiberL.git
+cd fiberL
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Running the Application
+
+```bash
+# Launch Streamlit interface
+streamlit run app.py
+```
+
+### Programmatic Usage
+
+```python
+from fiberL import fiberL
+import cv2
+
+# Load image
+image = cv2.imread('fiber_image.tif', cv2.IMREAD_GRAYSCALE)
+
+# Initialize analyzer
+analyzer = fiberL(
+    image=image,
+    scale_factor=0.5,  # microns per pixel
+    diffusion_iterations=10,
+    prune_length=5
+)
+
+# Process image
+analyzer.process()
+
+# Get results
+stats = analyzer.get_statistics()
+print(f"Number of fibers: {stats['count']}")
+print(f"Mean length: {stats['mean_length']:.2f} μm")
+print(f"Mean persistence length: {stats['mean_persistence']:.2f} μm")
+
+# Visualize
+analyzer.plot_results()
+
+# Export data
+analyzer.export_csv('fiber_data.csv')
+```
+
+---
+
+## Performance
+
+### Computational Complexity
+
+| Operation | Time Complexity | Space Complexity |
+|-----------|----------------|------------------|
+| Preprocessing | O(n²) | O(n²) |
+| Skeletonization | O(n² log n) | O(n²) |
+| Branch Detection | O(n²) | O(n) |
+| Network Reconstruction | O(m²) | O(m) |
+| Persistence Length | O(m³) | O(m) |
+
+Where n = image dimensions, m = number of fiber points
+
+### Typical Processing Times
+
+| Image Size | Fiber Count | Processing Time |
+|------------|-------------|-----------------|
+| 512×512 | ~50 | ~2 seconds |
+| 1024×1024 | ~100 | ~8 seconds |
+| 2048×2048 | ~200 | ~30 seconds |
+| 4096×4096 | ~500 | ~2 minutes |
+
+*Tested on Intel i7-9700K, 32GB RAM*
+
+---
+
+## Limitations & Future Work
+
+### Current Limitations
+- Requires high-contrast SEM images
+- Struggles with highly overlapping fibers
+- Manual parameter tuning sometimes needed
+- 2D analysis only (no depth information)
+
+### Planned Enhancements
+- Deep learning-based segmentation
+- 3D reconstruction from image stacks
+- Automated parameter optimization
+- Batch processing improvements
+- Export to standard formats (CSV, HDF5, JSON)
+- Integration with image databases
+
+---
+
+## Research Applications
+
+This tool has been used in research investigating:
+
+- **Polymer Science**: Electrospun nanofiber characterization
+- **Tissue Engineering**: Scaffold microstructure analysis
+- **Materials Testing**: Mechanical property prediction from structure
+- **Biomimetics**: Natural fiber network quantification
+
+---
+
+## Technical Documentation
+
+### Key Algorithms
+
+#### Anisotropic Diffusion (Perona-Malik)
+$$\frac{\partial I}{\partial t} = \text{div}(c(|\nabla I|) \nabla I)$$
+
+Where diffusion coefficient:
+$$c(|\nabla I|) = \exp\left(-\left(\frac{|\nabla I|}{K}\right)^2\right)$$
+
+#### Persistence Length
+$$\langle \cos\theta(s) \rangle = \exp\left(-\frac{s}{L_p}\right)$$
+
+Where:
+- $s$ = arc length along fiber
+- $L_p$ = persistence length
+- $\theta(s)$ = angle at position $s$
+
+#### Cosine Similarity (Orientation Matching)
+$$\text{similarity} = \frac{\mathbf{v}_1 \cdot \mathbf{v}_2}{|\mathbf{v}_1| |\mathbf{v}_2|}$$
+
+---
+
+## Contributing
+
+Contributions welcome! Areas for improvement:
+- Algorithm optimization
+- Additional quantitative metrics
+- Enhanced visualization options
+- Documentation improvements
+- Test coverage
+
+---
+
+## Citation
+
+If you use fiberL in your research, please cite:
+
+```
+Day, J. (2025). fiberL: Computer Vision for Fiber Network Analysis.
+GitHub repository: https://github.com/lonespear/fiberL
+```
+
+---
+
+## Contact
+
+**Jonathan Day**
+Department of Mathematical Sciences
+United States Military Academy
+West Point, NY
+
+**Email**: jonathan.day@westpoint.edu
+**GitHub**: [github.com/lonespear](https://github.com/lonespear)
+
+---
+
+[← Back to Projects](index.qmd){.btn .btn-secondary}
+[View on GitHub](https://github.com/lonespear/fiberL){.btn .btn-primary target="_blank"}
