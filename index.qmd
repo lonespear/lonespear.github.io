@@ -199,6 +199,31 @@ An interactive Streamlit application designed to help chess players master their
 :::
 ::::
 
+:::: {.g-col-12 .g-col-md-6}
+::: {.card .mb-3}
+::: {.card-body}
+### ⚔️ Warhammer 40K Tabletop Simulator {.card-title}
+
+**Turn-Based Strategy Game Engine**
+
+A digital implementation of Warhammer 40,000 tabletop gameplay mechanics using Pygame. Features all core game phases with authentic dice rolling, line-of-sight calculations, and tactical terrain placement.
+
+**Key Features:**
+
+- Five game phases (Command, Movement, Shooting, Charge, Fight)
+- Drag-and-drop unit movement with collision detection
+- Line-of-sight and terrain blocking mechanics
+- Authentic dice rolling for attacks and wounds
+- Unit stat popups with weapon profiles
+- Distance-based targeting and range circles
+
+**Technologies:** Python, Pygame, Math, OOP
+
+[GitHub](https://github.com/lonespear/40k-basic){.btn .btn-outline-secondary target="_blank"}
+:::
+:::
+::::
+
 :::::
 
 ---
