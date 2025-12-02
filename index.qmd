@@ -119,6 +119,7 @@ A comprehensive Streamlit dashboard visualizing the Russo-Ukrainian conflict fro
 **Technologies:** Python, Streamlit, Plotly, GeoPandas, Mapbox
 
 [GitHub](https://github.com/lonespear/russo-ukr){.btn .btn-outline-secondary target="_blank"}
+[Live Demo](https://russo-ukr.streamlit.app/){.btn .btn-success target="_blank"}
 :::
 :::
 ::::
