@@ -12,7 +12,7 @@
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
     height: 100%;
-    font-size: 0.5rem;
+    font-size: 0.8rem;
 }
 
 .card:hover {
@@ -27,20 +27,20 @@
 .card-title {
     color: #2c3e50;
     margin-bottom: 1rem;
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 600;
 }
 
 .card-body p {
-    font-size: 0.5rem;
+    font-size: 0.8rem;
 }
 
 .card-body ul {
-    font-size: 0.5rem;
+    font-size: 0.8rem;
 }
 
 .card-body strong {
-    font-size: 0.5rem;
+    font-size: 0.8rem;
 }
 
 /* Buttons */
@@ -52,7 +52,7 @@
     display: inline-block;
     font-weight: 500;
     transition: all 0.2s;
-    font-size: 0.5rem;
+    font-size: 0.75rem;
 }
 
 .btn-primary {
